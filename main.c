@@ -1,18 +1,18 @@
 /*
- * audiod — аудио-демон CactOS.
+ * audiod — audio daemon for CactOS.
  *
- * Ищет в devfs звуковые узлы (имя содержит "audio" или "dsp") и сообщает их
- * состояние по AF_UNIX-сокету /run/audiod.sock. Звуковой стек ядра пока не
- * экспортирует PCM-интерфейс в юзерспейс (модуль Intel-HDA регистрируется как
- * PCI-драйвер), поэтому audiod следит за появлением узла и держит сервис для
- * будущих клиентов.
+ * Looks for sound nodes in devfs (name contains "audio" or "dsp") and reports
+ * their state over the AF_UNIX socket /run/audiod.sock. The kernel sound stack
+ * does not export a PCM interface to userspace yet (the Intel-HDA module
+ * registers as a PCI driver), so audiod watches for the node to appear and
+ * keeps the service for future clients.
  *
- * Протокол (одна строка за соединение):
- *   status -> "audio=none\n" или "audio=present path=/dev/<node>\n"
+ * Protocol (one line per connection):
+ *   status -> "audio=none\n" or "audio=present path=/dev/<node>\n"
  *
- * Запускается супервизором cgoct как /sbin/audiod.
+ * Started by the cgoct supervisor as /sbin/audiod.
  *
- * /etc/audiod.conf (все ключи необязательны; создаётся при первом запуске):
+ * /etc/audiod.conf (all keys optional; created on first start):
  *   file=/var/log/audiod.log
  *   console=0
  *   interval=5
@@ -41,15 +41,15 @@ static int  console_on    = 0;
 static int  interval_sec  = 5;
 static int  out_fd        = -1;
 
-static char audio_node[MAX_NODE] = ""; /* "" = нет звукового узла */
+static char audio_node[MAX_NODE] = ""; /* "" = no sound node */
 
-/* Конфиг по умолчанию: пишется при первом запуске, если файла ещё нет. */
+/* Default config: written on first start if the file does not exist yet. */
 static const char default_config[] =
     "# audiod config - auto-generated on first start.\n"
     "#\n"
-    "# file     - журнал событий\n"
-    "# console  - дублировать на /dev/console (0|1)\n"
-    "# interval - период опроса /dev (сек)\n"
+    "# file     - event log\n"
+    "# console  - duplicate to /dev/console (0|1)\n"
+    "# interval - /dev poll period (sec)\n"
     "\n"
     "file=/var/log/audiod.log\n"
     "console=0\n"
@@ -118,7 +118,7 @@ static int is_audio_name(const char *nm) {
     return (strstr(nm, "audio") != 0 || strstr(nm, "dsp") != 0);
 }
 
-/* Обновить audio_node; вернуть 1, если состояние изменилось. */
+/* Update audio_node; return 1 if the state changed. */
 static int scan_audio(void) {
     char found[MAX_NODE] = "";
     int fd = open("/dev", O_RDONLY);
